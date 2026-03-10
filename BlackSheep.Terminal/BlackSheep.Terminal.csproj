@@ -5,6 +5,13 @@
         <TargetFramework>net10.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
+        <PublishAot>true</PublishAot>
+        <AssemblyName>blacksheep</AssemblyName>
+        <RootNamespace>BlackSheep.Terminal</RootNamespace>
     </PropertyGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Spectre.Console" Version="0.49.1" />
+    </ItemGroup>
 
 </Project>
