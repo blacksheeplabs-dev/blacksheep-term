@@ -1,17 +1,17 @@
 {
   "version": 2,
-  "dgSpecHash": "VrDSbItkmM0=",
+  "dgSpecHash": "3bb/x23a9eI=",
   "success": true,
-  "projectFilePath": "C:\\Users\\Vardump\\Documents\\Vardump\\repos\\BlackSheep.Terminal\\BlackSheep.Terminal\\BlackSheep.Terminal.csproj",
+  "projectFilePath": "/Users/nestorbardel/Documents/Vardump/repos/blacksheep-term/BlackSheep.Terminal/BlackSheep.Terminal.csproj",
   "expectedPackageFiles": [
-    "C:\\Users\\Vardump\\.nuget\\packages\\microsoft.dotnet.ilcompiler\\10.0.3\\microsoft.dotnet.ilcompiler.10.0.3.nupkg.sha512",
-    "C:\\Users\\Vardump\\.nuget\\packages\\microsoft.net.illink.tasks\\10.0.3\\microsoft.net.illink.tasks.10.0.3.nupkg.sha512",
-    "C:\\Users\\Vardump\\.nuget\\packages\\nstack.core\\1.1.1\\nstack.core.1.1.1.nupkg.sha512",
-    "C:\\Users\\Vardump\\.nuget\\packages\\spectre.console\\0.49.1\\spectre.console.0.49.1.nupkg.sha512",
-    "C:\\Users\\Vardump\\.nuget\\packages\\system.codedom\\9.0.4\\system.codedom.9.0.4.nupkg.sha512",
-    "C:\\Users\\Vardump\\.nuget\\packages\\system.management\\9.0.4\\system.management.9.0.4.nupkg.sha512",
-    "C:\\Users\\Vardump\\.nuget\\packages\\terminal.gui\\1.19.0\\terminal.gui.1.19.0.nupkg.sha512",
-    "C:\\Users\\Vardump\\.nuget\\packages\\runtime.win-x64.microsoft.dotnet.ilcompiler\\10.0.3\\runtime.win-x64.microsoft.dotnet.ilcompiler.10.0.3.nupkg.sha512"
+    "/Users/nestorbardel/.nuget/packages/microsoft.dotnet.ilcompiler/10.0.1/microsoft.dotnet.ilcompiler.10.0.1.nupkg.sha512",
+    "/Users/nestorbardel/.nuget/packages/microsoft.net.illink.tasks/10.0.1/microsoft.net.illink.tasks.10.0.1.nupkg.sha512",
+    "/Users/nestorbardel/.nuget/packages/nstack.core/1.1.1/nstack.core.1.1.1.nupkg.sha512",
+    "/Users/nestorbardel/.nuget/packages/spectre.console/0.49.1/spectre.console.0.49.1.nupkg.sha512",
+    "/Users/nestorbardel/.nuget/packages/system.codedom/9.0.4/system.codedom.9.0.4.nupkg.sha512",
+    "/Users/nestorbardel/.nuget/packages/system.management/9.0.4/system.management.9.0.4.nupkg.sha512",
+    "/Users/nestorbardel/.nuget/packages/terminal.gui/1.19.0/terminal.gui.1.19.0.nupkg.sha512",
+    "/Users/nestorbardel/.nuget/packages/runtime.osx-arm64.microsoft.dotnet.ilcompiler/10.0.1/runtime.osx-arm64.microsoft.dotnet.ilcompiler.10.0.1.nupkg.sha512"
   ],
   "logs": []
 }
