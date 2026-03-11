@@ -10,12 +10,12 @@
 using System;
 using System.Reflection;
 
-[assembly: System.Reflection.AssemblyCompanyAttribute("BlackSheep.Terminal")]
+[assembly: System.Reflection.AssemblyCompanyAttribute("blacksheep")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
-[assembly: System.Reflection.AssemblyProductAttribute("BlackSheep.Terminal")]
-[assembly: System.Reflection.AssemblyTitleAttribute("BlackSheep.Terminal")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+7a20187fbba8df3bab6c0b93d6535ff1e403408a")]
+[assembly: System.Reflection.AssemblyProductAttribute("blacksheep")]
+[assembly: System.Reflection.AssemblyTitleAttribute("blacksheep")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
 
 // Generado por la clase WriteCodeFragment de MSBuild.
