@@ -1,0 +1,13 @@
+description = "Genera un mensaje de commit de los archivos stageados y hace push de los mismos, el mensaje debe ser en español"
+
+prompt = """
+Actuá como un experto en Git. 
+1. Analizá los cambios en los archivos stageados ejecutando:
+!{git diff --staged}
+
+2. Generá un mensaje de commit siguiendo la convención 'Conventional Commits' (en español).
+
+3. Una vez generado el mensaje, propón la ejecución de:
+   git commit -m "[mensaje]"
+   git push
+"""
