@@ -7,7 +7,9 @@ Actuá como un experto en Git.
 
 2. Generá un mensaje de commit siguiendo la convención 'Conventional Commits' (en español).
 
-3. Una vez generado el mensaje, propón la ejecución de:
+3. Antes ejecutar los comandos git muestra los archivos que se commitearan, el mensaje que ha sido generado y pide autorizacion para ejecutarlos.
+
+4. Una vez Autorizado, propón la ejecución de:
    git commit -m "[mensaje]"
    git push
 """
