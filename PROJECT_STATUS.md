@@ -11,9 +11,10 @@
 
 ## 🛠️ Stack Tecnológico
 - **Runtime:** .NET 10.0 (Core)
-- **UI/Rendering:** [Spectre.Console](https://spectreconsole.net/) (Tablas, Padder, Rule, Markup, AnsiConsole)
+- **UI/Rendering:** [Spectre.Console] (Tablas, Padder, Rule, Markup, AnsiConsole)
+- **Serialization:** System.Text.Json con **Source Generation** (Compatible con Native AOT).
 - **Compilación:** Native AOT (Ahead-of-Time) para alta velocidad y portabilidad.
-- **Arquitectura:** Command Pattern + Dependency Injection manual + Elastic UI Logic.
+- **Arquitectura:** Command Pattern + Dependency Injection manual + Elastic UI Logic + Memory Rendering.
 
 ---
 
@@ -21,36 +22,58 @@
 1.  **`BlackSheep.Terminal/`**
     - `Program.cs`: Punto de entrada y composición.
     - **`Application/`**: 
-        - `TerminalApp.cs`: Motor de UI. Gestiona el renderizado elástico y la sincronización del historial.
+        - `TerminalApp.cs`: Motor de UI. Gestiona el renderizado elástico con memoria (`_lastUiHeight`) y la sincronización del historial.
         - `CommandProcessor.cs`: Motor de despacho de comandos, gestión de alias y built-ins.
     - **`Core/`**:
         - `Interfaces/`: `ICommand`, `IFileSystemService`, `IConfigurationService`.
         - `Commands/`: Implementaciones de comandos internos (ej: `CdCommand`).
     - **`Infrastructure/`**:
         - `FileSystemService.cs`: Lógica de sugerencias de rutas.
+        - `JsonConfigurationService.cs`: Persistencia compatible con AOT.
+        - `AppJsonContext.cs`: Contexto de generación de código para JSON.
 
 ---
 
 ## ✨ Características Implementadas
-- [x] **Sticky Bottom Horizon:** Barra de estado fija que muestra el CWD (Current Working Directory) con soporte para el símbolo `~` en el Home del usuario.
-- [x] **Elastic Interface (Compacta):** La zona interactiva es dinámica (2 a 5 líneas). El menú de sugerencias está limitado a 3 elementos para maximizar el área de historial.
-- [x] **Clean History Execution:** Lógica avanzada en `ExecuteCommand` que limpia la barra de estado y el menú de la pantalla antes de imprimir el comando, evitando que la interfaz se "grabe" en el historial de la terminal.
-- [x] **Command Dispatcher:** Soporte para comandos internos (`cd`), alias multiplataforma (`ll` -> `dir`/`ls -la`) y comandos nativos del sistema.
+- [x] **Sticky Bottom Horizon:** Barra de estado fija que actúa como "techo" de la zona de entrada.
+- [x] **Elastic Smart Interface:** La zona interactiva es dinámica (2 a 5 líneas) y usa **Memoria de Renderizado** para limpiar "fantasmas" visuales quirúrgicamente.
+- [x] **Clean History Execution:** El historial es blindado mediante un "push" dinámico, evitando que el output de los comandos (como `ls`) sea tapado por la UI.
+- [x] **Smart Interaction:** Soporte para `Tab` y `Enter` para seleccionar sugerencias del menú.
+- [x] **Native AOT Ready:** Código libre de reflexión dinámica y advertencias de nulidad (`CS8600`).
 - [x] **Ghost Text:** Autocompletado visual que se consolida con `Tab` o `Flecha Derecha`.
-- [x] **Safe & Robust Rendering:** Uso de `Console.Write` plano para el input del usuario para evitar errores de interpretación de markup y mantener el cursor siempre sincronizado.
+
+---
+
+## 🧠 Capas de Inteligencia (Warp-like Strategy)
+Para lograr un autocompletado de nivel premium, implementaremos un **Motor de Fusión de Sugerencias** basado en 4 capas:
+
+1.  **Capa 1: System Binaries (PATH):**
+    - **Objetivo:** Sugerir ejecutables del sistema (`git`, `docker`, `dotnet`, etc.) cuando el cursor está en la primera palabra.
+    - **Técnica:** Escaneo y caché de directorios del System PATH.
+
+2.  **Capa 2: Frecency History (Smart History):**
+    - **Objetivo:** Sugerir comandos completos basados en el uso real.
+    - **Técnica:** Algoritmo de *Frecency* (Frecuencia + Recencia) almacenado localmente.
+
+3.  **Capa 3: Semantic Grammar (Completions):**
+    - **Objetivo:** Sugerir subcomandos y banderas (`git commit --message`) detectando el contexto del comando actual.
+    - **Técnica:** Definiciones gramaticales en JSON o scripts de completado.
+
+4.  **Capa 4: IA Prompting (Google Gemini):**
+    - **Objetivo:** Resolver dudas o generar comandos complejos desde lenguaje natural usando el prefijo `#`.
+    - **Técnica:** Integración directa con el API de Gemini mediante el Lexer.
 
 ---
 
 ## 📈 Próximos Pasos (Pendiente)
-1. **Integración con Gemini:** Implementar la lógica para que los comandos con `#` interactúen con la API de Google Gemini (Próximo gran hito).
-2. **Historial de Comandos:** Navegación por comandos anteriores (Flecha Arriba/Abajo) con persistencia entre sesiones.
-3. **Persistencia de Configuración:** Guardar y cargar el API Key de Gemini y el tema visual desde un archivo JSON.
-4. **Mejora del Lexer:** Soporte para rutas con espacios y comillas (importante para el comando `cd`).
-5. **Comando de Ayuda:** Implementar `help` visual con Spectre.Console para listar funcionalidades.
+1.  **Mejora del Lexer (Prioridad #1):** Implementar `CommandLineParser` para soportar comillas y rutas con espacios (Vital para activar las Capas 1, 3 y 4).
+2.  **Implementación de L1 (Binarios):** Crear el servicio de descubrimiento de comandos del sistema.
+3.  **Persistencia de Historial (L2):** Implementar el guardado de comandos ejecutados con éxito.
+4.  **Integración con Gemini (L4):** Implementar el cliente para interactuar con la IA de Google.
 
 ---
 
 ## 📝 Notas de Inspección (Sync para otra PC)
-- **Coordenadas:** Los métodos `RenderEverything` y `ExecuteCommand` están sincronizados usando un rango de acción de 5 líneas máximas. No cambiar uno sin ajustar el otro.
-- **Limpieza:** La limpieza del historial se basa en sobreescribir con espacios en blanco antes de que el scroll de la terminal ocurra.
-- **Native AOT:** El proyecto está configurado para publicarse como binario nativo; evitar librerías que usen demasiada reflexión dinámica para mantener la compatibilidad.
+- **Renderizado:** La estabilidad visual se basa en la variable `_lastUiHeight` en `TerminalApp.cs`. No eliminarla, es la que evita los "fantasmas" del menú.
+- **AOT:** Mantener el uso de `AppJsonContext` para cualquier nuevo modelo que requiera serialización JSON.
+- **Lexer:** El `CommandLineParser` debe ser capaz de identificar en qué índice de argumento se encuentra el cursor para decidir qué Capa de Inteligencia activar.

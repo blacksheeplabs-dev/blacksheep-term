@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using BlackSheep.Terminal.Core.Interfaces;
 using BlackSheep.Terminal.Core.Models;
 
@@ -21,13 +21,13 @@ public class JsonConfigurationService: IConfigurationService
         try
         {
             var json = File.ReadAllText(_configPath);
-            return JsonSerializer.Deserialize<AppConfig>(json) ?? new AppConfig();
+            return JsonSerializer.Deserialize(json, AppJsonContext.Default.AppConfig) ?? new AppConfig();
         }
         catch
         {
             return new AppConfig();
         }
-}
+    }
 
     public void Save(AppConfig config)
     {
@@ -37,7 +37,7 @@ public class JsonConfigurationService: IConfigurationService
             Directory.CreateDirectory(directory);
         }
 
-        var json = JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true });
+        var json = JsonSerializer.Serialize(config, AppJsonContext.Default.AppConfig);
         File.WriteAllText(_configPath, json);
     }
 }

@@ -1,11 +1,9 @@
-﻿using BlackSheep.Terminal.Core.Interfaces;
+using BlackSheep.Terminal.Core.Interfaces;
 using BlackSheep.Terminal.Core.Models;
 using Spectre.Console;
+using System.Text;
 
 namespace BlackSheep.Terminal.Application;
-
-using System.Numerics;
-using System.Text;
 
 public class TerminalApp
 {
@@ -18,7 +16,7 @@ public class TerminalApp
     private List<string> _suggestions = new();
     private int _selectedIndex = 0;
     private string _ghostText = "";
-
+    private int _lastUiHeight = 2; // Memoria de limpieza para evitar fantasmas
 
     public TerminalApp(IConfigurationService configService, IFileSystemService fileService)
     {
@@ -35,10 +33,22 @@ public class TerminalApp
             RenderEverything();
 
             var key = Console.ReadKey(intercept: true);
+            bool inputChanged = false;
 
             if (key.Key == ConsoleKey.Enter)
             {
-                ExecuteCommand();
+                // Si hay sugerencias y texto fantasma, el primer Enter selecciona/completa
+                if (_suggestions.Count > 0 && !string.IsNullOrEmpty(_ghostText))
+                {
+                    _inputBuffer.Append(_ghostText);
+                    _ghostText = "";
+                    _suggestions.Clear();
+                }
+                else
+                {
+                    // Si no hay nada que sugerir, ejecutamos el comando
+                    ExecuteCommand();
+                }
                 continue;
             }
 
@@ -70,13 +80,18 @@ public class TerminalApp
             if (key.Key == ConsoleKey.Backspace && _inputBuffer.Length > 0)
             {
                 _inputBuffer.Remove(_inputBuffer.Length - 1, 1);
+                inputChanged = true;
             }
             else if (!char.IsControl(key.KeyChar))
             {
                 _inputBuffer.Append(key.KeyChar);
+                inputChanged = true;
             }
 
-            UpdateSuggestions();
+            if (inputChanged)
+            {
+                UpdateSuggestions();
+            }
         }
     }
 
@@ -87,21 +102,19 @@ public class TerminalApp
             int windowHeight = Console.WindowHeight;
             int windowWidth = Console.WindowWidth;
 
-            // 1. CONFIGURACIÓN COMPACTA (Máximo 3 sugerencias)
-            int maxVisibleMenu = 3;
-            int menuLinesCount = (_suggestions.Count > 1) ? Math.Min(_suggestions.Count, maxVisibleMenu) : 0;
-
-            // La interfaz es elástica: 1 (Barra) + menuLinesCount + 1 (Prompt)
-            int currentInterfaceHeight = menuLinesCount + 2;
-            int maxInterfaceHeight = 5;
-
+            // --- COORDENADAS (Declaradas primero para evitar CS0841) ---
             int promptLine = windowHeight - 1;
-            int statusBarLine = promptLine - menuLinesCount - 1;
-            int menusStartLine = statusBarLine + 1;
+            int statusBarLine = windowHeight - 2;
+            int suggestionsCount = (_suggestions.Count > 0) ? Math.Min(_suggestions.Count, 3) : 0;
+            int suggestionsStartLine = statusBarLine - suggestionsCount;
 
-            // 2. LIMPIEZA DE SEGURIDAD (Limpiamos el rango máximo de acción)
-            // Esto evita que queden restos de barras antiguas en el historial
-            for (int i = windowHeight - maxInterfaceHeight; i <= promptLine; i++)
+            // --- CÁLCULO DE LIMPIEZA ELÁSTICA ---
+            int currentUiHeight = 2 + suggestionsCount;
+            int heightToClean = Math.Max(currentUiHeight, _lastUiHeight);
+            int cleanStart = windowHeight - heightToClean;
+
+            // Limpieza quirúrgica basada en la memoria de la UI anterior
+            for (int i = cleanStart; i <= promptLine; i++)
             {
                 if (i >= 0 && i < Console.BufferHeight)
                 {
@@ -109,13 +122,31 @@ public class TerminalApp
                     Console.Write(new string(' ', windowWidth - 1));
                 }
             }
+            _lastUiHeight = currentUiHeight;
 
-            // 3. OBTENER RUTA ACTUAL (Toque Senior: ~ para el Home)
+            // --- 1. DIBUJAR SUGERENCIAS ---
+            if (suggestionsCount > 0)
+            {
+                Console.SetCursorPosition(0, suggestionsStartLine);
+                var menu = new Table().NoBorder().HideHeaders();
+                menu.AddColumn("Icon");
+                menu.AddColumn("Text");
+
+                for (int i = 0; i < suggestionsCount; i++)
+                {
+                    var isSelected = i == _selectedIndex;
+                    var color = isSelected ? _theme.PrimaryColor : "grey35";
+                    var icon = isSelected ? "➜" : " ";
+                    menu.AddRow($"[{color}]{icon}[/]", $"[{color}]{_suggestions[i]}[/]");
+                }
+                AnsiConsole.Write(new Padder(menu, new Padding(2, 0, 0, 0)));
+            }
+
+            // --- 2. DIBUJAR BARRA DE ESTADO ---
             string cwd = Directory.GetCurrentDirectory();
             string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
             string displayPath = cwd.Replace(home, "~");
 
-            // 4. DIBUJAR BARRA DE ESTADO (El "Horizonte")
             if (statusBarLine >= 0)
             {
                 Console.SetCursorPosition(0, statusBarLine);
@@ -125,26 +156,7 @@ public class TerminalApp
                 AnsiConsole.Write(rule);
             }
 
-            // 5. DIBUJAR MENÚ DE SUGERENCIAS (Compacto)
-            if (menuLinesCount > 0)
-            {
-                Console.SetCursorPosition(0, menusStartLine);
-                var menu = new Table().NoBorder().HideHeaders();
-                menu.AddColumn("Icon");
-                menu.AddColumn("Text");
-
-                for (int i = 0; i < menuLinesCount; i++)
-                {
-                    var isSelected = i == _selectedIndex;
-                    var color = isSelected ? _theme.PrimaryColor : "grey35";
-                    var icon = isSelected ? "➜" : " ";
-                    menu.AddRow($"[{color}]{icon}[/]", $"[{color}]{_suggestions[i]}[/]");
-                }
-                //Margen de 2 espacios para alineacion visual
-                AnsiConsole.Write(new Padder(menu, new Padding(2,0,0,0)));
-            }
-
-            // 6. DIBUJAR PROMPT (Última línea)
+            // --- 3. DIBUJAR PROMPT ---
             Console.SetCursorPosition(0, promptLine);
             AnsiConsole.Markup($"[{_theme.PrimaryColor}]>[/] ");
 
@@ -156,13 +168,11 @@ public class TerminalApp
                 AnsiConsole.Markup($"[{_theme.GhostTextColor}]{_ghostText}[/]");
             }
 
-            // 7. RE-POSICIONAR CURSOR (Exactamente tras el input)
+            // --- 4. POSICIONAR CURSOR ---
             int finalCursorLeft = Math.Min(currentInput.Length + 2, windowWidth - 1);
             Console.SetCursorPosition(finalCursorLeft, promptLine);
-
-
         }
-        catch{}
+        catch { }
     }
 
     private void UpdateSuggestions()
@@ -181,10 +191,6 @@ public class TerminalApp
         _suggestions = _fileService.GetPathSuggestions(lastWord);
         _selectedIndex = 0;
         UpdateGhostFromSelection();
-        // var text = _inputBuffer.ToString();
-        // _suggestions = _fileService.GetPathSuggestions(text);
-        // _selectedIndex = 0;
-        // UpdateGhostFromSelection();
     }
 
     private void UpdateGhostFromSelection()
@@ -214,57 +220,54 @@ public class TerminalApp
     private void ExecuteCommand()
     {
         var cmd = _inputBuffer.ToString().Trim();
-        // 1. CALCULAR ALTURA DE LA INTERFAZ ANTES DE BORRAR
-        int menuHeight = (_suggestions.Count > 1) ? Math.Min(_suggestions.Count, 3) : 0;
-        int currentInterfaceHeight = menuHeight + 2;
         int windowHeight = Console.WindowHeight;
-        
-        // 2. LIMPIEZA TOTAL ANTES DE IMPRIMIR AL HISTORIAL
-        // Borramos físicamente la barra y el prompt para que no se "graben" en el historial al hacer scroll
-        int cleanStart = Math.Max(0, windowHeight - 5);
+
+        // Limpieza dinámica antes de imprimir
+        int activeSuggestions = (_suggestions.Count > 0) ? Math.Min(_suggestions.Count, 3) : 0;
+        int currentUiHeight = 2 + activeSuggestions; 
+        int cleanStart = windowHeight - currentUiHeight;
+
         for (int i = cleanStart; i < windowHeight; i++)
         {
-            Console.SetCursorPosition(0, i);
-            Console.Write(new string(' ', Console.WindowWidth - 1));
+            if (i >= 0 && i < Console.BufferHeight)
+            {
+                Console.SetCursorPosition(0, i);
+                Console.Write(new string(' ', Console.WindowWidth - 1));
+            }
         }
 
-        // 3. POSICIONAR CURSOR PARA EL COMANDO
-        // El comando se imprime donde estaba la barra de estado, integrándose al historial
-        Console.SetCursorPosition(0, windowHeight - currentInterfaceHeight);
+        Console.SetCursorPosition(0, cleanStart);
 
         if (string.IsNullOrEmpty(cmd))
         {
-            _inputBuffer.Clear();
-            _suggestions.Clear();
-            _ghostText = "";
+            ResetInput();
             return;
         }
 
-        // Imprimimos el comando que el usuario ejecutó
         AnsiConsole.MarkupLine($"[{_theme.PrimaryColor}]>[/] {cmd}");
 
-        // 4. EJECUTAR EL COMANDO
         if (cmd.StartsWith("#"))
         {
-            AnsiConsole.MarkupLine($"[{_theme.PrimaryColor}]AI:[/] Procesando: [italic]{cmd[1..]}[/]");
+            AnsiConsole.MarkupLine($"[{_theme.PrimaryColor}]AI:[/] Procesando... ");
         }
         else
         {
             _commandProcessor.Process(cmd);
         }
 
-        // 5. EMPUJAR EL HISTORIAL (CRÍTICO)
-        // Imprimimos líneas vacías para que el output del comando suba
-        // y deje espacio libre para el próximo RenderEverything()
-        for (int i = 0; i < currentInterfaceHeight; i++)
+        // Push compacto de 2 líneas
+        for (int i = 0; i < 2; i++)
         {
             Console.WriteLine();
         }
 
-        // 6. LIMPIEZA FINAL Y RESET
+        ResetInput();
+    }
+
+    private void ResetInput()
+    {
         _inputBuffer.Clear();
         _suggestions.Clear();
         _ghostText = "";
     }
-
 }
