@@ -5,58 +5,52 @@
 - **Intervención:** Explicaré y diseñaré el código a escribir, pero **no realizaré cambios directos** en los archivos a menos que lo solicites explícitamente.
 
 ## 🚀 Overview
-**BlackSheep Terminal** es una interfaz de línea de comandos (CLI) interactiva y moderna, diseñada para ofrecer una experiencia similar a terminales avanzadas (como Warp) con autocompletado en tiempo real, "ghost text" y sugerencias inteligentes. Está construida sobre el ecosistema .NET y optimizada para ser distribuida como un binario nativo.
+**BlackSheep Terminal** es una interfaz de línea de comandos (CLI) interactiva y moderna. Ha evolucionado de un prototipo básico a una terminal con **Interfaz de Pantalla Fija (Sticky Bottom)**, emulando la experiencia de herramientas premium como Warp o el CLI de Gemini.
 
 ---
 
 ## 🛠️ Stack Tecnológico
 - **Runtime:** .NET 10.0 (Core)
-- **UI/Rendering:** [Spectre.Console](https://spectreconsole.net/) (Tablas, Markup, AnsiConsole)
-- **Compilación:** Native AOT (Ahead-of-Time) para alta velocidad y portabilidad sin dependencias.
-- **Lenguaje:** C# 14+ (usando características modernas como colecciones y slicing).
+- **UI/Rendering:** [Spectre.Console](https://spectreconsole.net/) (Tablas, Padder, Rule, Markup, AnsiConsole)
+- **Compilación:** Native AOT (Ahead-of-Time) para alta velocidad y portabilidad.
+- **Arquitectura:** Command Pattern + Dependency Injection manual + Elastic UI Logic.
 
 ---
 
 ## 🏗️ Arquitectura del Proyecto
-El proyecto sigue una estructura limpia y desacoplada:
-
 1.  **`BlackSheep.Terminal/`**
-    - `Program.cs`: Punto de entrada y composición de servicios.
+    - `Program.cs`: Punto de entrada y composición.
     - **`Application/`**: 
-        - `TerminalApp.cs`: El "corazón" del CLI. Gestiona el bucle principal, la captura de teclas (`Console.ReadKey`), el renderizado y la ejecución de comandos.
+        - `TerminalApp.cs`: Motor de UI. Gestiona el renderizado elástico y la sincronización del historial.
+        - `CommandProcessor.cs`: Motor de despacho de comandos, gestión de alias y built-ins.
     - **`Core/`**:
-        - `Interfaces/`: Definición de contratos (`IFileSystemService`, `IConfigurationService`).
-        - `Models/`: Entidades de dominio como `AppConfig` y `AppTheme`.
+        - `Interfaces/`: `ICommand`, `IFileSystemService`, `IConfigurationService`.
+        - `Commands/`: Implementaciones de comandos internos (ej: `CdCommand`).
     - **`Infrastructure/`**:
-        - `FileSystemService.cs`: Lógica de exploración del sistema de archivos para sugerencias.
-        - `JsonConfigurationService.cs`: Manejo de persistencia de configuración.
+        - `FileSystemService.cs`: Lógica de sugerencias de rutas.
 
 ---
 
 ## ✨ Características Implementadas
-- [x] **Bucle Interactivo:** Captura de entrada carácter por carácter sin interrumpir el flujo.
-- [x] **Ghost Text:** Sugerencias visuales en gris oscuro que se completan con `Tab` o `Flecha Derecha`.
-- [x] **Menú de Sugerencias (Warp-style):** Menú vertical dinámico que aparece bajo el prompt para navegación de archivos.
-- [x] **Integración con el Sistema:** Ejecución de comandos nativos mediante `zsh` (macOS/Linux) o `powershell` (Windows).
-- [x] **Tematización:** Soporte inicial para colores personalizados mediante `AppTheme`.
-- [x] **Preparado para IA:** Prefijo `#` reservado para comandos procesados por Gemini.
+- [x] **Sticky Bottom Horizon:** Barra de estado fija que muestra el CWD (Current Working Directory) con soporte para el símbolo `~` en el Home del usuario.
+- [x] **Elastic Interface (Compacta):** La zona interactiva es dinámica (2 a 5 líneas). El menú de sugerencias está limitado a 3 elementos para maximizar el área de historial.
+- [x] **Clean History Execution:** Lógica avanzada en `ExecuteCommand` que limpia la barra de estado y el menú de la pantalla antes de imprimir el comando, evitando que la interfaz se "grabe" en el historial de la terminal.
+- [x] **Command Dispatcher:** Soporte para comandos internos (`cd`), alias multiplataforma (`ll` -> `dir`/`ls -la`) y comandos nativos del sistema.
+- [x] **Ghost Text:** Autocompletado visual que se consolida con `Tab` o `Flecha Derecha`.
+- [x] **Safe & Robust Rendering:** Uso de `Console.Write` plano para el input del usuario para evitar errores de interpretación de markup y mantener el cursor siempre sincronizado.
 
 ---
 
 ## 📈 Próximos Pasos (Pendiente)
-1. **Integración con Gemini:** Implementar la lógica para que los comandos con `#` interactúen con la API de Google Gemini.
-2. **Persistencia de Configuración:** Activar el uso de `JsonConfigurationService` para guardar el API Key y preferencias.
-3. **Historial de Comandos:** Implementar navegación por comandos anteriores con las flechas.
-4. **Comandos de Sistema y Multiplataforma:** 
-    - Corregir el funcionamiento de `cd` (debe ser un comando interno o "builtin" ya que un proceso hijo no puede cambiar el directorio del padre).
-    - Implementar alias universales (ej: `ll` debe funcionar en Windows mapeando a una lógica interna o a `dir`).
-    - Asegurar que el CLI sea agnóstico al SO en sus comandos básicos.
-5. **Refactorización de Renderizado:** Optimizar la lógica de `RenderEverything` para evitar parpadeos y mejorar el manejo del scroll.
-5. **Robustez:** Manejo de errores más detallado en la ejecución de procesos externos.
+1. **Integración con Gemini:** Implementar la lógica para que los comandos con `#` interactúen con la API de Google Gemini (Próximo gran hito).
+2. **Historial de Comandos:** Navegación por comandos anteriores (Flecha Arriba/Abajo) con persistencia entre sesiones.
+3. **Persistencia de Configuración:** Guardar y cargar el API Key de Gemini y el tema visual desde un archivo JSON.
+4. **Mejora del Lexer:** Soporte para rutas con espacios y comillas (importante para el comando `cd`).
+5. **Comando de Ayuda:** Implementar `help` visual con Spectre.Console para listar funcionalidades.
 
 ---
 
-## 📝 Notas de Inspección
-- El código está bien estructurado y utiliza interfaces para facilitar el testeo.
-- La lógica de sugerencias de archivos en `FileSystemService` es funcional pero limitada a los primeros 10 resultados para mantener el rendimiento.
-- El uso de `Native AOT` es un gran acierto para una herramienta de terminal por su tiempo de arranque instantáneo.
+## 📝 Notas de Inspección (Sync para otra PC)
+- **Coordenadas:** Los métodos `RenderEverything` y `ExecuteCommand` están sincronizados usando un rango de acción de 5 líneas máximas. No cambiar uno sin ajustar el otro.
+- **Limpieza:** La limpieza del historial se basa en sobreescribir con espacios en blanco antes de que el scroll de la terminal ocurra.
+- **Native AOT:** El proyecto está configurado para publicarse como binario nativo; evitar librerías que usen demasiada reflexión dinámica para mantener la compatibilidad.
