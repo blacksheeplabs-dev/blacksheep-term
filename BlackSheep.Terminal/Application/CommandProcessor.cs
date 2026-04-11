@@ -1,5 +1,7 @@
 using BlackSheep.Terminal.Core.Commands;
 using BlackSheep.Terminal.Core.Interfaces;
+using BlackSheep.Terminal.Core.Logic;
+using BlackSheep.Terminal.Core.Models;
 using Spectre.Console;
 using System.Diagnostics;
 
@@ -37,50 +39,56 @@ public class CommandProcessor
     {
         if (string.IsNullOrWhiteSpace(input)) return;
 
-        // 1. Dividir el input para analizar el primer término
-        var parts = input.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        var cmdName = parts[0].ToLower();
-        var args = parts.Skip(1).ToArray();
+        // 1. Parsear el input en tokens inteligentes (respetando comillas y espacios)
+        var tokens = CommandLineParser.Parse(input);
+        if(tokens.Count == 0) return;
 
-        //2. Resolver Alias
-        string finalCommand;
+        // El primer token siempre es el comando
+        var cmdNameToken = tokens[0];
+        var cmdName = cmdNameToken.Value.ToLower();
+
+        // Los argumentos son los valores limpios (sin comillas) de los tokens restantes
+        var args = tokens.Skip(1).Select(t => t.Value).ToArray();
+
+        // 2. Resolver Alias (Lógica mejorada)
         if(_aliases.TryGetValue(cmdName, out var aliasedCmd))
         {
-            // Reconstruimos el comando: Alias + Argumentos originales
-            var remainingArgs = args.Length > 0 ? " " + string.Join(" ", args) : string.Empty;
-            finalCommand = aliasedCmd + remainingArgs;
+            // Si hay un alias (ej: ll -> ls -la), lo parseamos también para extraer sus partes
+            var aliasedTokens = CommandLineParser.Parse(aliasedCmd);
+            cmdName = aliasedTokens[0].Value.ToLower();
 
-            // Volvemos a extraer el cmdName del alias por si es un built-in (ej: clear -> cls)
-            var aliasedParts = aliasedCmd.Split(' ');
-            cmdName = aliasedParts[0].ToLower();
-            // Si el alias tiene argumentos propios (como ls -la), los combinamos
-            args = aliasedParts.Skip(1).Concat(args).ToArray();
-        }
-        else
-        {
-            finalCommand = input;
+            // Combinamos los argumentos del alias con los argumentos originales
+            args = aliasedTokens.Skip(1).Select(t => t.Value).Concat(args).ToArray();
         }
 
-        // 3. Ejecutar Built-in si existe (ahora funciona incluso si vino de un alias)
-        if (_builtIns.TryGetValue(cmdName, out var builtIn))
+        // 3. Ejecutar Built-in si existe
+        if(_builtIns.TryGetValue(cmdName, out var builtIn))
         {
             builtIn.Execute(args);
             return;
         }
 
-        // 4. Ejecutar el comando final (con alias aplicado) en el Shell
-        ExecuteSystemCommand(finalCommand);
+        // 4. Ejecutar comando del sistema
+        // IMPORTANTE: Al reconstruir para cmd.exe o zsh, debemos asegurarnos de
+        // que los argumentos originales que tenian espacios sigan protegidos.
+        ExecuteSystemCommand(cmdName, args);
     }
 
-    private void ExecuteSystemCommand(string fullCommand)
+    private void ExecuteSystemCommand(string cmd, string[] args)
     {
         try
         {
+            // Protegemos con comillas SOLO los argumentos que tienen espacios
+            var protectedArgs = args.Select(a => (a.Contains(' ') && !a.StartsWith("\"")) ? $"\"{a}\"" : a);
+            string fullArgs = string.Join(" ", protectedArgs);
+            string fullCommand = string.IsNullOrEmpty(fullArgs) ? cmd : $"{cmd} {fullArgs}";
+
             using var process = new Process();
             if (OperatingSystem.IsWindows())
             {
                 process.StartInfo.FileName = "cmd.exe";
-                process.StartInfo.Arguments = $"/c {fullCommand}";
+                // Usamos /c y envolvemos TODO el comando en comillas para que CMD maneje bien los espacios internos
+                process.StartInfo.Arguments = $"/c \"{fullCommand}\"";
             }
             else
             {
@@ -92,7 +100,8 @@ public class CommandProcessor
             process.Start();
             process.WaitForExit();
 
-        }catch(Exception ex)
+        }
+        catch (Exception ex)
         {
             AnsiConsole.MarkupLine($"[red]Error de sistema:[/] {ex.Message}");
         }

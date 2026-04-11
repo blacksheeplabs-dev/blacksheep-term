@@ -255,11 +255,10 @@ public class TerminalApp
             _commandProcessor.Process(cmd);
         }
 
-        // Push compacto de 2 líneas
-        for (int i = 0; i < 2; i++)
-        {
-            Console.WriteLine();
-        }
+        // CAMBIO AQUÍ: Forzar que el cursor esté al final de la salida del comando
+        // y dejar un espacio para que el Sticky Bottom no sobrescriba la última línea del comando
+        Console.WriteLine();
+        _lastUiHeight = 0; // Resetear memoria para que el siguiente Render empiece de cero
 
         ResetInput();
     }
