@@ -23,8 +23,10 @@
     - `Program.cs`: Punto de entrada y composición.
     - **`Application/`**: 
         - `TerminalApp.cs`: Motor de UI. Gestiona el renderizado elástico con memoria (`_lastUiHeight`) y la sincronización del historial.
-        - `CommandProcessor.cs`: Motor de despacho de comandos, gestión de alias y built-ins.
+        - `CommandProcessor.cs`: Motor de despacho de comandos, gestión de alias y built-ins (Ahora basado en Tokens).
     - **`Core/`**:
+        - **`Logic/`**: `CommandLineParser.cs` (Lexer inteligente con soporte para comillas).
+        - **`Models/`**: `CommandToken.cs`, `AppConfig.cs`, `AppTheme.cs`.
         - `Interfaces/`: `ICommand`, `IFileSystemService`, `IConfigurationService`.
         - `Commands/`: Implementaciones de comandos internos (ej: `CdCommand`).
     - **`Infrastructure/`**:
@@ -37,8 +39,8 @@
 ## ✨ Características Implementadas
 - [x] **Sticky Bottom Horizon:** Barra de estado fija que actúa como "techo" de la zona de entrada.
 - [x] **Elastic Smart Interface:** La zona interactiva es dinámica (2 a 5 líneas) y usa **Memoria de Renderizado** para limpiar "fantasmas" visuales quirúrgicamente.
-- [x] **Clean History Execution:** El historial es blindado mediante un "push" dinámico, evitando que el output de los comandos (como `ls`) sea tapado por la UI.
-- [x] **Smart Interaction:** Soporte para `Tab` y `Enter` para seleccionar sugerencias del menú.
+- [x] **Clean History Execution:** El historial es blindado mediante un "push" dinámico, evitando que el output de los comandos sea tapado por la UI.
+- [x] **Smart Command Lexing:** Soporte completo para comillas (`" "`) y rutas con espacios gracias al nuevo `CommandLineParser`.
 - [x] **Native AOT Ready:** Código libre de reflexión dinámica y advertencias de nulidad (`CS8600`).
 - [x] **Ghost Text:** Autocompletado visual que se consolida con `Tab` o `Flecha Derecha`.
 
@@ -66,14 +68,13 @@ Para lograr un autocompletado de nivel premium, implementaremos un **Motor de Fu
 ---
 
 ## 📈 Próximos Pasos (Pendiente)
-1.  **Mejora del Lexer (Prioridad #1):** Implementar `CommandLineParser` para soportar comillas y rutas con espacios (Vital para activar las Capas 1, 3 y 4).
-2.  **Implementación de L1 (Binarios):** Crear el servicio de descubrimiento de comandos del sistema.
-3.  **Persistencia de Historial (L2):** Implementar el guardado de comandos ejecutados con éxito.
-4.  **Integración con Gemini (L4):** Implementar el cliente para interactuar con la IA de Google.
+1.  **Implementación de L1 (Binarios) [Prioridad #1]:** Crear el servicio de descubrimiento de comandos del sistema mediante el escaneo del `PATH`.
+2.  **Persistencia de Historial (L2):** Implementar el guardado de comandos ejecutados con éxito para habilitar la sugerencia por frecuencia.
+3.  **Integración con Gemini (L4):** Implementar el cliente para interactuar con la IA de Google usando el prefijo `#`.
 
 ---
 
 ## 📝 Notas de Inspección (Sync para otra PC)
-- **Renderizado:** La estabilidad visual se basa en la variable `_lastUiHeight` en `TerminalApp.cs`. No eliminarla, es la que evita los "fantasmas" del menú.
+- **Renderizado:** La estabilidad visual se basa en la variable `_lastUiHeight` en `TerminalApp.cs`. No eliminarla, es la que evita los "fantasmas" del menú. Tras cada ejecución de comando, se debe resetear a 0.
 - **AOT:** Mantener el uso de `AppJsonContext` para cualquier nuevo modelo que requiera serialización JSON.
-- **Lexer:** El `CommandLineParser` debe ser capaz de identificar en qué índice de argumento se encuentra el cursor para decidir qué Capa de Inteligencia activar.
+- **Lexer:** El `CommandLineParser` devuelve tokens con `StartIndex` y `EndIndex`. Usar estos índices para el reemplazo quirúrgico de texto durante el autocompletado.
